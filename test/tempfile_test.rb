@@ -1,7 +1,7 @@
 require File.expand_path(File.join(File.dirname(__FILE__), "test_helper"))
 require 'better/tempfile'
 
-class TestTempfile < Test::Unit::TestCase
+class TempfileTest < Test::Unit::TestCase
   include Better
   
   def teardown
@@ -12,7 +12,7 @@ class TestTempfile < Test::Unit::TestCase
   end
   
   def test_basic
-    @tempfile = Better::Tempfile.new("foo")
+    @tempfile = Tempfile.new("foo")
     path = @tempfile.path
     @tempfile.write("hello world")
     @tempfile.close
