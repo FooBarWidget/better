@@ -144,6 +144,17 @@ class TempfileTest < Test::Unit::TestCase
     end
   end
   
+  def test_finalizer_does_not_unlink_if_already_unlinked
+    filename = run_script("tempfile_explicit_close_and_unlink_example.rb").strip
+    assert File.exist?(filename)
+    
+    filename = run_script("tempfile_explicit_unlink_example.rb").strip
+    if !filename.empty?
+      # POSIX unlink semantics supported, continue with test
+      assert File.exist?(filename)
+    end
+  end
+  
   def test_close_does_not_make_path_nil
     @tempfile = Tempfile.new("foo")
     @tempfile.close

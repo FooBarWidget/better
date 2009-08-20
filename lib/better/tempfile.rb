@@ -30,6 +30,9 @@ module Better
 #   tempfile was unlinked before.
 # * Ruby 1.9.1's version closes the file when #unlink is called. This makes
 #   unlink-before-close unusable.
+# * Ruby's bundled version deletes the temporary file in its finalizer, even
+#   when #unlink was called before. As a result it may potentially delete other
+#   Ruby processes' temp files when it's not supposed to.
 #
 # == Synopsis
 #
@@ -95,7 +98,7 @@ module Better
 # mutex.
 class Tempfile < DelegateClass(File)
   MAX_TRY = 10
-  @@cleanlist = []
+  @@live_tempfiles = []
   @@lock = Mutex.new
   
   # Creates a temporary file of mode 0600 in the temporary directory,
@@ -133,8 +136,9 @@ class Tempfile < DelegateClass(File)
           tmpname = File.join(tmpdir, make_tmpname(basename, n))
           lock = tmpname + '.lock'
           n += 1
-        end while @@cleanlist.include?(tmpname) or
-            File.exist?(lock) or File.exist?(tmpname)
+        end while @@live_tempfiles.include?(tmpname) ||
+                  File.exist?(lock) ||
+                  File.exist?(tmpname)
         Dir.mkdir(lock)
       rescue
         failure += 1
@@ -143,20 +147,20 @@ class Tempfile < DelegateClass(File)
       end
     end
 
-    @data = [tmpname]
-    @clean_proc = self.class.callback(@data)
-    ObjectSpace.define_finalizer(self, @clean_proc)
+    @finalizer_info = [tmpname]
+    @finalizer_callback = self.class.create_finalizer_callback(@finalizer_info)
+    ObjectSpace.define_finalizer(self, @finalizer_callback)
 
     if opts.nil?
       opts = []
     else
       opts = [opts]
     end
-    @tmpfile = File.open(tmpname, File::RDWR|File::CREAT|File::EXCL, 0600, *opts)
+    @tmpfile = File.open(tmpname, File::RDWR | File::CREAT | File::EXCL, 0600, *opts)
     @tmpname = tmpname
-    @@cleanlist << @tmpname
-    @data[1] = @tmpfile
-    @data[2] = @@cleanlist
+    @@live_tempfiles << tmpname
+    @finalizer_info[1] = @tmpfile
+    @finalizer_info[2] = @@live_tempfiles
 
     super(@tmpfile)
 
@@ -170,7 +174,7 @@ class Tempfile < DelegateClass(File)
   def open
     @tmpfile.close if @tmpfile
     @tmpfile = File.open(@tmpname, 'r+')
-    @data[1] = @tmpfile
+    @finalizer_info[1] = @tmpfile
     __setobj__(@tmpfile)
   end
   
@@ -189,9 +193,7 @@ class Tempfile < DelegateClass(File)
   # <tt>close(true)</tt>.
   def close!
     _close
-    @clean_proc.call
-    ObjectSpace.undefine_finalizer(self)
-    @data = @tmpname = nil
+    unlink if !unlinked?
   end
 
   # Unlinks (deletes) the file from the filesystem. One should always unlink
@@ -232,8 +234,8 @@ class Tempfile < DelegateClass(File)
       if File.exist?(@tmpname) # keep this order for thread safeness
         unlink_file(@tmpname)
       end
-      @@cleanlist.delete(@tmpname)
-      @data = @tmpname = nil
+      @@live_tempfiles.delete(@tmpname)
+      @finalizer_info = @tmpname = nil
       ObjectSpace.undefine_finalizer(self)
     rescue Errno::EACCES
       # may not be able to unlink on Windows; just ignore
@@ -266,21 +268,16 @@ class Tempfile < DelegateClass(File)
   alias length size
 
   class << self
-    def callback(data)	# :nodoc:
-      pid = $$
+    def create_finalizer_callback(info) # :nodoc:
+      original_pid = $$
       Proc.new do
-        if pid == $$
-          path, tmpfile, cleanlist = *data
-
-          print "removing ", path, "..." if $DEBUG
-
+        # If we forked, then don't cleanup the temp files created by
+        # the parent process.
+        if original_pid == $$
+          path, tmpfile, live_tempfiles = *info
           tmpfile.close if tmpfile
-
-          # keep this order for thread safeness
-          File.unlink(path) if File.exist?(path)
-          cleanlist.delete(path) if cleanlist
-
-          print "done\n" if $DEBUG
+          File.unlink(path) if path && File.exist?(path)
+          live_tempfiles.delete(path) if live_tempfiles
         end
       end
     end
@@ -326,7 +323,7 @@ class Tempfile < DelegateClass(File)
     def _close	# :nodoc:
       @tmpfile.close if @tmpfile
       @tmpfile = nil
-      @data[1] = nil if @data
+      @finalizer_info[1] = nil if @finalizer_info
     end
     
   private
