@@ -2,6 +2,9 @@
 
 Better is a collection of better replacements Ruby standard libraries. The versions shipped with Ruby have problems, which this library intends to fix. It is my wish that this code will one day find its way back to upstream Ruby.
 
+* Github: http://github.com/FooBarWidget/better/tree/master
+* API documentation: http://better.rubyforge.org/
+
 == Usage
 
 All of the libraries in Better are drop-in replacement and have the exact same API as the original, and work on both Ruby 1.8 and 1.9. For example, instead of

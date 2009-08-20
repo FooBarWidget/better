@@ -22,3 +22,8 @@ Rake::TestTask.new do |t|
   t.test_files = FileList['test/*_test.rb']
   t.verbose = true
 end
+
+desc "Upload documentation to Rubyforge"
+task :upload => :rdoc do
+	sh "scp -r doc/* rubyforge.org:/var/www/gforge-projects/better/"
+end
