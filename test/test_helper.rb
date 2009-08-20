@@ -1,9 +1,17 @@
 $LOAD_PATH.unshift(File.expand_path(File.join(File.dirname(__FILE__), "..", "lib")))
 require 'rubygems'
 require 'test/unit'
-require 'flexmock/test_unit'  # Because Mocha can't stub DelegateClass objects for some reason.
 require 'rbconfig'
 require 'better/tempfile'
+
+require 'flexmock/test_unit'  # Because Mocha can't stub DelegateClass objects for some reason.
+if !defined?(Test::Unit::AssertionFailedError)
+  # Flexmock on the other hand is broken on Ruby 1.9 so we fix it by
+  # monkeypatching it here. Sigh....
+  Test::Unit.class_eval do
+    AssertionFailedError = MiniTest::Assertion
+  end
+end
 
 def run_script(script, *args)
   output = Better::Tempfile.new('output')

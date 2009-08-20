@@ -1,6 +1,6 @@
 = Overview
 
-Better is a collection of improved Ruby standard libraries. The versions shipped with Ruby have problems, which this library intends to fix. All of the libraries in Better are drop-in replacement and have the exact same API as the original. For example, instead of
+Better is a collection of improved Ruby standard libraries. The versions shipped with Ruby have problems, which this library intends to fix. All of the libraries in Better are drop-in replacement and have the exact same API as the original, and work on both Ruby 1.8 and 1.9. For example, instead of
 
  require 'tempfile'
  Tempfile.new(...)
