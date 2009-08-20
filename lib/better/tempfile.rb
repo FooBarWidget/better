@@ -111,7 +111,7 @@ class Tempfile < DelegateClass(File)
 
     lock = tmpname = nil
     n = failure = 0
-    @@lock.synchronize {
+    @@lock.synchronize do
       begin
         begin
           tmpname = File.join(tmpdir, make_tmpname(basename, n))
@@ -125,7 +125,7 @@ class Tempfile < DelegateClass(File)
         retry if failure < MAX_TRY
         raise "cannot generate tempfile `%s'" % tmpname
       end
-    }
+    end
 
     @data = [tmpname]
     @clean_proc = self.class.callback(@data)
@@ -149,20 +149,7 @@ class Tempfile < DelegateClass(File)
 
     Dir.rmdir(lock)
   end
-
-  def make_tmpname(basename, n)
-    case basename
-    when Array
-      prefix, suffix = *basename
-    else
-      prefix, suffix = basename, ''
-    end
-
-    t = Time.now.strftime("%Y%m%d")
-    path = "#{prefix}#{t}-#{$$}-#{rand(0x100000000).to_s(36)}-#{n}#{suffix}"
-  end
-  private :make_tmpname
-
+  
   # Opens or reopens the file with mode "r+".
   def open
     @tmpfile.close if @tmpfile
@@ -170,14 +157,7 @@ class Tempfile < DelegateClass(File)
     @data[1] = @tmpfile
     __setobj__(@tmpfile)
   end
-
-  def _close	# :nodoc:
-    @tmpfile.close if @tmpfile
-    @tmpfile = nil
-    @data[1] = nil if @data
-  end
-  protected :_close
-
+  
   #Closes the file.  If the optional flag is true, unlinks the file
   # after closing.
   #
@@ -272,21 +252,21 @@ class Tempfile < DelegateClass(File)
   class << self
     def callback(data)	# :nodoc:
       pid = $$
-      Proc.new {
-	if pid == $$
-	  path, tmpfile, cleanlist = *data
+      Proc.new do
+        if pid == $$
+          path, tmpfile, cleanlist = *data
 
-	  print "removing ", path, "..." if $DEBUG
+          print "removing ", path, "..." if $DEBUG
 
-	  tmpfile.close if tmpfile
+          tmpfile.close if tmpfile
 
-	  # keep this order for thread safeness
-	  File.unlink(path) if File.exist?(path)
-	  cleanlist.delete(path) if cleanlist
+          # keep this order for thread safeness
+          File.unlink(path) if File.exist?(path)
+          cleanlist.delete(path) if cleanlist
 
-	  print "done\n" if $DEBUG
-	end
-      }
+          print "done\n" if $DEBUG
+        end
+      end
     end
 
     # If no block is given, this is a synonym for new().
@@ -298,20 +278,39 @@ class Tempfile < DelegateClass(File)
       tempfile = new(*args)
 
       if block_given?
-	begin
-	  yield(tempfile)
-	ensure
-	  tempfile.close
-	end
+        begin
+          yield(tempfile)
+        ensure
+          tempfile.close
+        end
       else
-	tempfile
+        tempfile
       end
     end
   end
   
+  protected
+    def _close	# :nodoc:
+      @tmpfile.close if @tmpfile
+      @tmpfile = nil
+      @data[1] = nil if @data
+    end
+    
   private
     def unlink_file(filename)
       File.unlink(filename)
+    end
+    
+    def make_tmpname(basename, n)
+      case basename
+      when Array
+        prefix, suffix = *basename
+      else
+        prefix, suffix = basename, ''
+      end
+
+      t = Time.now.strftime("%Y%m%d")
+      path = "#{prefix}#{t}-#{$$}-#{rand(0x100000000).to_s(36)}-#{n}#{suffix}"
     end
 end
 
