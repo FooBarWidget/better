@@ -158,12 +158,10 @@ class Tempfile < DelegateClass(File)
     __setobj__(@tmpfile)
   end
   
-  #Closes the file.  If the optional flag is true, unlinks the file
-  # after closing.
-  #
-  # If you don't explicitly unlink the temporary file, the removal
-  # will be delayed until the object is finalized.
-  def close(unlink_now=false)
+  # Closes the file. If +unlink_now+ is true, then the file will be unlinked
+  # (deleted) after closing. Of course, you can choose to later call #unlink
+  # if you do not unlink it now.
+  def close(unlink_now = false)
     if unlink_now
       close!
     else
@@ -171,7 +169,8 @@ class Tempfile < DelegateClass(File)
     end
   end
 
-  # Closes and unlinks the file.
+  # Closes and unlinks (deletes) the file. Has the same effect as called
+  # <tt>close(true)</tt>.
   def close!
     _close
     @clean_proc.call
@@ -227,11 +226,14 @@ class Tempfile < DelegateClass(File)
   end
   alias delete unlink
   
+  # Returns whether #unlink has been called on this Tempfile, and whether it
+  # succeeded.
   def unlinked?
     @tmpname.nil?
   end
 
-  # Returns the full path name of the temporary file.
+  # Returns the full path name of the temporary file. This will be nil if
+  # #unlink has been called.
   def path
     @tmpname
   end
@@ -268,11 +270,28 @@ class Tempfile < DelegateClass(File)
       end
     end
 
-    # If no block is given, this is a synonym for new().
+    # Creates a new Tempfile.
     #
-    # If a block is given, it will be passed tempfile as an argument,
-    # and the tempfile will automatically be closed when the block
-    # terminates.  The call returns the value of the block.
+    # If no block is given, this is a synonym for Tempfile.new.
+    #
+    # If a block is given, then a Tempfile object will be constructed,
+    # and the block is run with said object as argument. The Tempfile
+    # oject will be automatically closed after the block terminates.
+    # The call returns the value of the block.
+    #
+    # In any case, all arguments (+*args+) will be passed to Tempfile.new.
+    #
+    #  Better::Tempfile.open('foo', '/home/temp') do |f|
+    #    ... do something with f ...
+    #  end
+    #  
+    #  # Equivalent:
+    #  f = Better::Tempfile.open('foo', '/home/temp')
+    #  begin
+    #     ... do something with f ...
+    #  ensure
+    #     f.close
+    #  end
     def open(*args)
       tempfile = new(*args)
 

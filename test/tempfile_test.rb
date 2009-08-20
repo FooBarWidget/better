@@ -19,6 +19,22 @@ class TempfileTest < Test::Unit::TestCase
     assert_equal "hello world", File.read(path)
   end
   
+  def test_saves_in_tmpdir
+    @tempfile = Tempfile.new("foo")
+    assert_equal Dir.tmpdir, File.dirname(@tempfile.path)
+  end
+  
+  def test_basename
+    @tempfile = Tempfile.new("foo")
+    assert_match /^foo/, File.basename(@tempfile.path)
+  end
+  
+  def test_basename_with_suffix
+    @tempfile = Tempfile.new(["foo", ".txt"])
+    assert_match /^foo/, File.basename(@tempfile.path)
+    assert_match /\.txt$/, File.basename(@tempfile.path)
+  end
+  
   def test_unlink_and_unlink_p
     @tempfile = Tempfile.new("foo")
     path = @tempfile.path
