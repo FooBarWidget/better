@@ -25,5 +25,5 @@ end
 
 desc "Upload documentation to Rubyforge"
 task :upload => :rdoc do
-	sh "scp -r doc/* rubyforge.org:/var/www/gforge-projects/better/"
+	sh "scp -Cr doc/* rubyforge.org:/var/www/gforge-projects/better/"
 end

@@ -103,7 +103,7 @@ class Tempfile < DelegateClass(File)
   @@live_tempfiles = []
   @@lock = Mutex.new
   
-  class CreationError < StandardError
+  class CreationError < StandardError # :nodoc:
   end
   
   class << self
