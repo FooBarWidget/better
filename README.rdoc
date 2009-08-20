@@ -7,20 +7,24 @@ Better is a collection of better replacements Ruby standard libraries. The versi
 
 == Usage
 
+Install with:
+
+  gem install better
+
 All of the libraries in Better are drop-in replacement and have the exact same API as the original, and work on both Ruby 1.8 and 1.9. For example, instead of
 
- require 'tempfile'
- Tempfile.new(...)
+  require 'tempfile'
+  Tempfile.new(...)
 
 you just prefix the library filename with 'better/' and the class name with 'Better::':
 
- require 'better/tempfile'
- Better::Tempfile.new(...)
+  require 'better/tempfile'
+  Better::Tempfile.new(...)
 
 Or you can even override the standard version by requiring the library with the 'better/override/' prefix:
 
- require 'better/override/tempfile'
- Tempfile  # => now refers to Better::Tempfile instead of ::Tempfile
+  require 'better/override/tempfile'
+  Tempfile  # => now refers to Better::Tempfile instead of ::Tempfile
 
 This last feature should of course be used with care.
 
