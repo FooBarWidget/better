@@ -8,6 +8,8 @@ require 'delegate'
 require 'tmpdir'
 require 'thread'
 
+module Better
+
 # A class for managing temporary files.  This library is written to be
 # thread safe.
 class Tempfile < DelegateClass(File)
@@ -58,7 +60,7 @@ class Tempfile < DelegateClass(File)
     }
 
     @data = [tmpname]
-    @clean_proc = Tempfile.callback(@data)
+    @clean_proc = self.class.callback(@data)
     ObjectSpace.define_finalizer(self, @clean_proc)
 
     if opts.nil?
@@ -207,12 +209,4 @@ class Tempfile < DelegateClass(File)
   end
 end
 
-if __FILE__ == $0
-#  $DEBUG = true
-  f = Tempfile.new("foo")
-  f.print("foo\n")
-  f.close
-  f.open
-  p f.gets # => "foo\n"
-  f.close!
-end
+end # module Better
