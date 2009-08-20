@@ -34,6 +34,8 @@ module Better
 #   when #unlink was called before. As a result it may potentially delete other
 #   Ruby processes' temp files when it's not supposed to.
 #
+# Better::Tempfile is based on Ruby 1.9.2's version (SVN 24594).
+#
 # == Synopsis
 #
 #  require 'better/tempfile'
@@ -100,6 +102,58 @@ class Tempfile < DelegateClass(File)
   MAX_TRY = 10
   @@live_tempfiles = []
   @@lock = Mutex.new
+  
+  class << self
+    # Creates a new Tempfile.
+    #
+    # If no block is given, this is a synonym for Tempfile.new.
+    #
+    # If a block is given, then a Tempfile object will be constructed,
+    # and the block is run with said object as argument. The Tempfile
+    # oject will be automatically closed after the block terminates.
+    # The call returns the value of the block.
+    #
+    # In any case, all arguments (+*args+) will be passed to Tempfile.new.
+    #
+    #  Better::Tempfile.open('foo', '/home/temp') do |f|
+    #     ... do something with f ...
+    #  end
+    #  
+    #  # Equivalent:
+    #  f = Better::Tempfile.open('foo', '/home/temp')
+    #  begin
+    #     ... do something with f ...
+    #  ensure
+    #     f.close
+    #  end
+    def open(*args)
+      tempfile = new(*args)
+
+      if block_given?
+        begin
+          yield(tempfile)
+        ensure
+          tempfile.close
+        end
+      else
+        tempfile
+      end
+    end
+    
+    def create_finalizer_callback(info) # :nodoc:
+      original_pid = $$
+      Proc.new do
+        # If we forked, then don't cleanup the temp files created by
+        # the parent process.
+        if original_pid == $$
+          path, tmpfile, live_tempfiles = *info
+          tmpfile.close if tmpfile
+          File.unlink(path) if path && File.exist?(path)
+          live_tempfiles.delete(path) if live_tempfiles
+        end
+      end
+    end
+  end
   
   # Creates a temporary file of mode 0600 in the temporary directory,
   # opens it with mode "w+", and returns a Tempfile object which
@@ -266,58 +320,6 @@ class Tempfile < DelegateClass(File)
     end
   end
   alias length size
-
-  class << self
-    def create_finalizer_callback(info) # :nodoc:
-      original_pid = $$
-      Proc.new do
-        # If we forked, then don't cleanup the temp files created by
-        # the parent process.
-        if original_pid == $$
-          path, tmpfile, live_tempfiles = *info
-          tmpfile.close if tmpfile
-          File.unlink(path) if path && File.exist?(path)
-          live_tempfiles.delete(path) if live_tempfiles
-        end
-      end
-    end
-
-    # Creates a new Tempfile.
-    #
-    # If no block is given, this is a synonym for Tempfile.new.
-    #
-    # If a block is given, then a Tempfile object will be constructed,
-    # and the block is run with said object as argument. The Tempfile
-    # oject will be automatically closed after the block terminates.
-    # The call returns the value of the block.
-    #
-    # In any case, all arguments (+*args+) will be passed to Tempfile.new.
-    #
-    #  Better::Tempfile.open('foo', '/home/temp') do |f|
-    #    ... do something with f ...
-    #  end
-    #  
-    #  # Equivalent:
-    #  f = Better::Tempfile.open('foo', '/home/temp')
-    #  begin
-    #     ... do something with f ...
-    #  ensure
-    #     f.close
-    #  end
-    def open(*args)
-      tempfile = new(*args)
-
-      if block_given?
-        begin
-          yield(tempfile)
-        ensure
-          tempfile.close
-        end
-      else
-        tempfile
-      end
-    end
-  end
   
   protected
     def _close	# :nodoc:
