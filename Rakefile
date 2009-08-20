@@ -13,7 +13,7 @@ require 'rake/testtask'
 Rake::RDocTask.new do |rd|
   rd.main = "README.rdoc"
   rd.title = "Better: API documentation"
-  rd.rdoc_files.include("README.rdoc", "lib/**/*.rb")
+  rd.rdoc_files.include("README.rdoc", "LICENSE", "lib/**/*.rb")
   rd.rdoc_dir = "doc"
 end
 

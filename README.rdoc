@@ -1,6 +1,10 @@
 = Overview
 
-Better is a collection of improved Ruby standard libraries. The versions shipped with Ruby have problems, which this library intends to fix. All of the libraries in Better are drop-in replacement and have the exact same API as the original, and work on both Ruby 1.8 and 1.9. For example, instead of
+Better is a collection of better replacements Ruby standard libraries. The versions shipped with Ruby have problems, which this library intends to fix. It is my wish that this code will one day find its way back to upstream Ruby.
+
+== Usage
+
+All of the libraries in Better are drop-in replacement and have the exact same API as the original, and work on both Ruby 1.8 and 1.9. For example, instead of
 
  require 'tempfile'
  Tempfile.new(...)
@@ -18,3 +22,12 @@ Or you can even override the standard version by requiring the library with the 
 This last feature should of course be used with care.
 
 Please refer to the individual classes for more documentation.
+
+== Contributing
+
+The Github repository is located at http://github.com/FooBarWidget/better/tree/master.
+Is there a Ruby standard library that you think can be improved? Just fork the repository and start hacking! It doesn't matter whether you want to fix a small bug, want to write unit tests or just want to improve documentation - anything is fine.
+
+You can contact me at:
+
+* Hongli Lai (hongli@phusion.nl)
