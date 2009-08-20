@@ -216,7 +216,6 @@ class Tempfile < DelegateClass(File)
     # keep this order for thread safeness
     begin
       if File.exist?(@tmpname)
-        closed? or close
         unlink_file(@tmpname)
       end
       @@cleanlist.delete(@tmpname)

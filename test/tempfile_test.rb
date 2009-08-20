@@ -43,7 +43,7 @@ class TempfileTest < Test::Unit::TestCase
   end
   
   def test_unlink_silently_fails_on_windows
-    tempfile = flexmock(Better::Tempfile.new("foo"))
+    tempfile = flexmock(Tempfile.new("foo"))
     path = tempfile.path
     begin
       tempfile.should_receive(:unlink_file).with(path).raises(Errno::EACCES)
@@ -54,6 +54,24 @@ class TempfileTest < Test::Unit::TestCase
     ensure
       tempfile.close
       File.unlink(path)
+    end
+  end
+  
+  def test_unlink_before_close_works_on_posix_systems
+    tempfile = Tempfile.new("foo")
+    begin
+      path = tempfile.path
+      tempfile.unlink
+      if tempfile.unlinked?
+        assert !File.exist?(path)
+        tempfile.write("hello ")
+        tempfile.write("world\n")
+        tempfile.rewind
+        assert_equal "hello world\n", tempfile.read
+      end
+    ensure
+      tempfile.close
+      tempfile.unlink if !tempfile.unlinked?
     end
   end
   
