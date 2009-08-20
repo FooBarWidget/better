@@ -38,17 +38,17 @@ module Better
 #
 # == Synopsis
 #
-#  require 'better/tempfile'
-#  
-#  file = Better::Tempfile.new('foo')
-#  file.path      # => A unique filename in the OS's temp directory,
-#                 #    e.g.: "/tmp/foo.24722.0"
-#                 #    This filename contains 'foo' in its basename.
-#  file.write("hello world")
-#  file.rewind
-#  file.read      # => "hello world"
-#  file.close
-#  file.unlink    # deletes the temp file
+#   require 'better/tempfile'
+#   
+#   file = Better::Tempfile.new('foo')
+#   file.path      # => A unique filename in the OS's temp directory,
+#                  #    e.g.: "/tmp/foo.24722.0"
+#                  #    This filename contains 'foo' in its basename.
+#   file.write("hello world")
+#   file.rewind
+#   file.read      # => "hello world"
+#   file.close
+#   file.unlink    # deletes the temp file
 #
 # == Good practices
 #
@@ -65,13 +65,13 @@ module Better
 # Therefore, one should always call #unlink or close in an ensure block, like
 # this:
 #
-#  file = Better::Tempfile.new('foo)
-#  begin
-#     ...do something with file...
-#  ensure
-#     file.close
-#     file.unlink   # deletes the temp file
-#  end
+#   file = Better::Tempfile.new('foo)
+#   begin
+#      ...do something with file...
+#   ensure
+#      file.close
+#      file.unlink   # deletes the temp file
+#   end
 #
 # === Unlink after creation
 #
@@ -115,17 +115,17 @@ class Tempfile < DelegateClass(File)
     #
     # In any case, all arguments (+*args+) will be passed to Tempfile.new.
     #
-    #  Better::Tempfile.open('foo', '/home/temp') do |f|
-    #     ... do something with f ...
-    #  end
-    #  
-    #  # Equivalent:
-    #  f = Better::Tempfile.open('foo', '/home/temp')
-    #  begin
-    #     ... do something with f ...
-    #  ensure
-    #     f.close
-    #  end
+    #   Better::Tempfile.open('foo', '/home/temp') do |f|
+    #      ... do something with f ...
+    #   end
+    #   
+    #   # Equivalent:
+    #   f = Better::Tempfile.open('foo', '/home/temp')
+    #   begin
+    #      ... do something with f ...
+    #   ensure
+    #      f.close
+    #   end
     def open(*args)
       tempfile = new(*args)
 
@@ -155,20 +155,46 @@ class Tempfile < DelegateClass(File)
     end
   end
   
-  # Creates a temporary file of mode 0600 in the temporary directory,
-  # opens it with mode "w+", and returns a Tempfile object which
-  # represents the created temporary file.  A Tempfile object can be
-  # treated just like a normal File object.
+  # call-seq:
+  #    new(basename, [tmpdir = Dir.tmpdir], [options])
   #
-  # The basename parameter is used to determine the name of a
-  # temporary file.  If an Array is given, the first element is used
-  # as prefix string and the second as suffix string, respectively.
-  # Otherwise it is treated as prefix string.
+  # Creates a temporary file with permissions 0600 (= only readable and
+  # writable by the owner) and opens it with mode "w+".
   #
-  # If tmpdir is omitted, the temporary directory is determined by
-  # Dir::tmpdir provided by 'tmpdir.rb'.
-  # When $SAFE > 0 and the given tmpdir is tainted, it uses
-  # /tmp. (Note that ENV values are tainted by default)
+  # The +basename+ parameter is used to determine the name of the
+  # temporary file. You can either pass a String or an Array with
+  # 2 String elements. In the former form, the temporary file's base
+  # name will begin with the given string. In the latter form,
+  # the temporary file's base name will begin with the array's first
+  # element, and end with the second element. For example:
+  #
+  #   file = Better::Tempfile.new('hello')
+  #   file.path  # => something like: "/tmp/foo2843-8392-92849382--0"
+  #   
+  #   # Use the Array form to enforce an extension in the filename:
+  #   file = Better::Tempfile.new(['hello', '.jpg'])
+  #   file.path  # => something like: "/tmp/foo2843-8392-92849382--0.jpg"
+  #
+  # The temporary file will be placed in the directory as specified
+  # by the +tmpdir+ parameter. By default, this is +Dir.tmpdir+ (see
+  # 'tmpdir.rb' in the Ruby standard library.)
+  # When $SAFE > 0 and the given +tmpdir+ is tainted, it uses
+  # '/tmp' as the temporary directory. Please note that ENV values
+  # are tainted by default, and +Dir.tmpdir+'s return value might
+  # come from environment variables (e.g. <tt>$TMPDIR</tt>).
+  #
+  #   file = Better::Tempfile.new('hello', '/home/aisaka')
+  #   file.path  # => something like: "/home/aisaka/foo2843-8392-92849382--0"
+  #
+  # You can also pass an options hash. Under the hood, Better::Tempfile creates
+  # the temporary file using +File.open+. These options will be passed to
+  # +File.open+. This is mostly useful on Ruby 1.9 for specifying encoding
+  # options, e.g.:
+  #
+  #   Better::Tempfile.new('hello', '/home/aisaka', :encoding => 'ascii-8bit')
+  #   
+  #   # You can also omit the 'tmpdir' parameter:
+  #   Better::Tempfile.new('hello', :encoding => 'ascii-8bit')
   def initialize(basename, *rest)
     # I wish keyword argument settled soon.
     if rest.last.respond_to?(:to_hash)
@@ -178,7 +204,7 @@ class Tempfile < DelegateClass(File)
       opts = nil
     end
     tmpdir = rest[0] || Dir::tmpdir
-    if $SAFE > 0 and tmpdir.tainted?
+    if $SAFE > 0 && tmpdir.tainted?
       tmpdir = '/tmp'
     end
 
@@ -254,13 +280,13 @@ class Tempfile < DelegateClass(File)
   # the file after using it, as is explained in the "Explicit close" good
   # practice section in the Tempfile overview:
   #
-  #  file = Better::Tempfile.new('foo)
-  #  begin
-  #     ...do something with file...
-  #  ensure
-  #     file.close
-  #     file.unlink   # deletes the temp file
-  #  end
+  #   file = Better::Tempfile.new('foo)
+  #   begin
+  #      ...do something with file...
+  #   ensure
+  #      file.close
+  #      file.unlink   # deletes the temp file
+  #   end
   #
   # === Unlink-before-close
   #
@@ -274,15 +300,15 @@ class Tempfile < DelegateClass(File)
   # you want to practice unlink-before-close whenever possible, then you should
   # write code like this:
   #
-  #  file = Better::Tempfile.new('foo')
-  #  file.unlink   # On Windows this silently fails.
-  #  begin
-  #     ... do something with file ...
-  #  ensure
-  #     file.close!   # Closes the file handle. If the file wasn't unlinked
-  #                   # because #unlink failed, then this method will attempt
-  #                   # to do so again.
-  #  end
+  #   file = Better::Tempfile.new('foo')
+  #   file.unlink   # On Windows this silently fails.
+  #   begin
+  #      ... do something with file ...
+  #   ensure
+  #      file.close!   # Closes the file handle. If the file wasn't unlinked
+  #                    # because #unlink failed, then this method will attempt
+  #                    # to do so again.
+  #   end
   def unlink
     begin
       if File.exist?(@tmpname) # keep this order for thread safeness

@@ -19,9 +19,25 @@ class TempfileTest < Test::Unit::TestCase
     assert_equal "hello world", File.read(path)
   end
   
-  def test_saves_in_tmpdir
+  def test_saves_in_dir_tmpdir_by_default
     @tempfile = Tempfile.new("foo")
     assert_equal Dir.tmpdir, File.dirname(@tempfile.path)
+  end
+  
+  def test_saves_in_given_directory
+    subdir = File.join(Dir.tmpdir, "tempfile-test-#{rand}")
+    Dir.mkdir(subdir)
+    begin
+      tempfile = Tempfile.new("foo", subdir)
+      tempfile.close
+      begin
+        assert_equal subdir, File.dirname(tempfile.path)
+      ensure
+        tempfile.unlink
+      end
+    ensure
+      Dir.rmdir(subdir)
+    end
   end
   
   def test_basename
