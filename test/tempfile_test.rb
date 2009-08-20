@@ -7,7 +7,7 @@ class TempfileTest < Test::Unit::TestCase
   def teardown
     if @tempfile
       @tempfile.close if !@tempfile.closed?
-      @tempfile.unlink
+      @tempfile.unlink if !@tempfile.unlinked?
     end
   end
   
@@ -17,6 +17,57 @@ class TempfileTest < Test::Unit::TestCase
     @tempfile.write("hello world")
     @tempfile.close
     assert_equal "hello world", File.read(path)
+  end
+  
+  def test_unlink_and_unlink_p
+    @tempfile = Tempfile.new("foo")
+    path = @tempfile.path
+    assert !@tempfile.unlinked?
+    
+    @tempfile.close
+    assert !@tempfile.unlinked?
+    assert File.exist?(path)
+    
+    @tempfile.unlink
+    assert @tempfile.unlinked?
+    assert !File.exist?(path)
+    
+    @tempfile = nil
+  end
+  
+  def test_unlink_makes_path_nil
+    @tempfile = Tempfile.new("foo")
+    @tempfile.close
+    @tempfile.unlink
+    assert_nil @tempfile.path
+  end
+  
+  def test_unlink_silently_fails_on_windows
+    tempfile = flexmock(Better::Tempfile.new("foo"))
+    path = tempfile.path
+    begin
+      tempfile.should_receive(:unlink_file).with(path).raises(Errno::EACCES)
+      assert_nothing_raised do
+        tempfile.unlink
+      end
+      assert !tempfile.unlinked?
+    ensure
+      tempfile.close
+      File.unlink(path)
+    end
+  end
+  
+  def test_close_and_close_p
+    @tempfile = Tempfile.new("foo")
+    assert !@tempfile.closed?
+    @tempfile.close
+    assert @tempfile.closed?
+  end
+  
+  def test_close_does_not_make_path_nil
+    @tempfile = Tempfile.new("foo")
+    @tempfile.close
+    assert_not_nil @tempfile.path
   end
   
   if defined?(Encoding)
