@@ -18,6 +18,19 @@ module Better
 # supported by File, you can in fact call any File instance method on a
 # Tempfile object.
 #
+# == Comparison to Ruby's bundled version
+#
+# * Much better documentation.
+# * Is unit tested.
+# * Ruby 1.8's version can generate "weird" path names that can confuse certain
+#   command line tools such as Curl. Better::Tempfile is based on Ruby 1.9's
+#   version and generates saner filenames.
+# * Ruby 1.8's version has a bug which makes unlink-before-close (as described
+#   below) unusable: it raises an an exception when #close is called if the
+#   tempfile was unlinked before.
+# * Ruby 1.9.1's version closes the file when #unlink is called. This makes
+#   unlink-before-close unusable.
+#
 # == Synopsis
 #
 #  require 'better/tempfile'
@@ -74,9 +87,12 @@ module Better
 #
 # == Minor notes
 #
-# Tempfile is both thread-safe and inter-process-safe: when picking a temp
-# filename, it guarantees that no other threads or processes will pick
-# the same filename.
+# Tempfile's filename picking method is both thread-safe and inter-process-safe:
+# it guarantees that no other threads or processes will pick the same filename.
+#
+# Tempfile itself however may not be entirely thread-safe. If you access the
+# same Tempfile object from multiple threads then you should protect it with a
+# mutex.
 class Tempfile < DelegateClass(File)
   MAX_TRY = 10
   @@cleanlist = []
@@ -212,9 +228,8 @@ class Tempfile < DelegateClass(File)
   #                   # to do so again.
   #  end
   def unlink
-    # keep this order for thread safeness
     begin
-      if File.exist?(@tmpname)
+      if File.exist?(@tmpname) # keep this order for thread safeness
         unlink_file(@tmpname)
       end
       @@cleanlist.delete(@tmpname)

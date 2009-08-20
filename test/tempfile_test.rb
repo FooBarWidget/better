@@ -98,10 +98,83 @@ class TempfileTest < Test::Unit::TestCase
     assert @tempfile.closed?
   end
   
+  def test_close_with_unlink_now_true_works
+    @tempfile = Tempfile.new("foo")
+    path = @tempfile.path
+    @tempfile.close(true)
+    assert @tempfile.closed?
+    assert @tempfile.unlinked?
+    assert_nil @tempfile.path
+    assert !File.exist?(path)
+  end
+  
+  def test_close_with_unlink_now_true_does_not_unlink_if_already_unlinked
+    @tempfile = Tempfile.new("foo")
+    path = @tempfile.path
+    @tempfile.unlink
+    File.open(path, "w").close
+    begin
+      @tempfile.close(true)
+      assert File.exist?(path)
+    ensure
+      File.unlink(path) rescue nil
+    end
+  end
+  
+  def test_close_bang_works
+    @tempfile = Tempfile.new("foo")
+    path = @tempfile.path
+    @tempfile.close!
+    assert @tempfile.closed?
+    assert @tempfile.unlinked?
+    assert_nil @tempfile.path
+    assert !File.exist?(path)
+  end
+  
+  def test_close_bang_does_not_unlink_if_already_unlinked
+    @tempfile = Tempfile.new("foo")
+    path = @tempfile.path
+    @tempfile.unlink
+    File.open(path, "w").close
+    begin
+      @tempfile.close!
+      assert File.exist?(path)
+    ensure
+      File.unlink(path) rescue nil
+    end
+  end
+  
   def test_close_does_not_make_path_nil
     @tempfile = Tempfile.new("foo")
     @tempfile.close
     assert_not_nil @tempfile.path
+  end
+  
+  def test_close_flushes_buffer
+    @tempfile = Tempfile.new("foo")
+    @tempfile.write("hello")
+    @tempfile.close
+    assert 5, File.size(@tempfile.path)
+  end
+  
+  def test_tempfile_is_unlinked_when_ruby_exits
+    filename = run_script("tempfile_unlink_on_exit_example.rb").strip
+    assert !File.exist?(filename)
+  end
+  
+  def test_size_flushes_buffer_before_determining_file_size
+    @tempfile = Tempfile.new("foo")
+    @tempfile.write("hello")
+    assert 0, File.size(@tempfile.path)
+    assert 5, @tempfile.size
+    assert 5, File.size(@tempfile.path)
+  end
+  
+  def test_size_works_if_file_is_closed
+    @tempfile = Tempfile.new("foo")
+    @tempfile.write("hello")
+    @tempfile.close
+    assert 5, @tempfile.size
   end
   
   if defined?(Encoding)
