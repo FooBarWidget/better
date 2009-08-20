@@ -52,6 +52,13 @@ class TempfileTest < Test::Unit::TestCase
     assert_match /\.txt$/, File.basename(@tempfile.path)
   end
   
+  def test_raises_creation_error_if_max_tries_surpassed
+    Tempfile.expects(:make_directory).times(Tempfile::MAX_TRIES).raises(Errno::EEXIST)
+    assert_raises(Tempfile::CreationError) do
+      @tempfile = Tempfile.new('foo')
+    end
+  end
+  
   def test_unlink_and_unlink_p
     @tempfile = Tempfile.new("foo")
     path = @tempfile.path
@@ -76,10 +83,10 @@ class TempfileTest < Test::Unit::TestCase
   end
   
   def test_unlink_silently_fails_on_windows
-    tempfile = flexmock(Tempfile.new("foo"))
+    tempfile = Tempfile.new("foo")
     path = tempfile.path
     begin
-      tempfile.should_receive(:unlink_file).with(path).raises(Errno::EACCES)
+      tempfile.expects(:unlink_file).with(path).raises(Errno::EACCES)
       assert_nothing_raised do
         tempfile.unlink
       end

@@ -99,9 +99,12 @@ module Better
 # same Tempfile object from multiple threads then you should protect it with a
 # mutex.
 class Tempfile < DelegateClass(File)
-  MAX_TRY = 10
+  MAX_TRIES = 10  # :nodoc:
   @@live_tempfiles = []
   @@lock = Mutex.new
+  
+  class CreationError < StandardError
+  end
   
   class << self
     # Creates a new Tempfile.
@@ -153,6 +156,10 @@ class Tempfile < DelegateClass(File)
         end
       end
     end
+    
+    def make_directory(dir) # :nodoc:
+      Dir.mkdir(dir)
+    end
   end
   
   # call-seq:
@@ -195,6 +202,15 @@ class Tempfile < DelegateClass(File)
   #   
   #   # You can also omit the 'tmpdir' parameter:
   #   Better::Tempfile.new('hello', :encoding => 'ascii-8bit')
+  #
+  # === Exceptions
+  # 
+  # Under rare circumstances, this constructor can raise an instance of
+  # Better::Tempfile::CreationError. This could happen if a large number
+  # of threads or processes are simultaneously trying to create temp files
+  # and stepping on each others' toes. If Better::Tempfile.new cannot find
+  # a unique filename within a limited number of tries, then it will raise
+  # this exception.
   def initialize(basename, *rest)
     # I wish keyword argument settled soon.
     if rest.last.respond_to?(:to_hash)
@@ -219,11 +235,11 @@ class Tempfile < DelegateClass(File)
         end while @@live_tempfiles.include?(tmpname) ||
                   File.exist?(lock) ||
                   File.exist?(tmpname)
-        Dir.mkdir(lock)
-      rescue
+        self.class.make_directory(lock)
+      rescue SystemCallError
         failure += 1
-        retry if failure < MAX_TRY
-        raise "cannot generate tempfile `%s'" % tmpname
+        retry if failure < MAX_TRIES
+        raise CreationError, ("cannot generate tempfile `%s'" % tmpname)
       end
     end
 
