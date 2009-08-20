@@ -1,5 +1,6 @@
 require File.expand_path(File.join(File.dirname(__FILE__), "test_helper"))
 require 'better/tempfile'
+require 'thread'
 
 class TempfileTest < Test::Unit::TestCase
   include Better
@@ -163,11 +164,13 @@ class TempfileTest < Test::Unit::TestCase
   def test_finalizer_does_not_unlink_if_already_unlinked
     filename = run_script("tempfile_explicit_close_and_unlink_example.rb").strip
     assert File.exist?(filename)
+    File.unlink(filename)
     
     filename = run_script("tempfile_explicit_unlink_example.rb").strip
     if !filename.empty?
       # POSIX unlink semantics supported, continue with test
       assert File.exist?(filename)
+      File.unlink(filename)
     end
   end
   
@@ -202,6 +205,46 @@ class TempfileTest < Test::Unit::TestCase
     @tempfile.write("hello")
     @tempfile.close
     assert 5, @tempfile.size
+  end
+  
+  def test_concurrency
+    threads = []
+    tempfiles = []
+    lock = Mutex.new
+    cond = ConditionVariable.new
+    start = false
+    
+    4.times do
+      threads << Thread.new do
+        lock.synchronize do
+          while !start
+            cond.wait(lock)
+          end
+        end
+        result = []
+        30.times do
+          result << Tempfile.new('foo')
+        end
+        Thread.current[:result] = result
+      end
+    end
+    
+    lock.synchronize do
+      start = true
+      cond.broadcast
+    end
+    threads.each do |thread|
+      thread.join
+      tempfiles |= thread[:result]
+    end
+    filenames = tempfiles.map { |f| f.path }
+    begin
+      assert_equal filenames.size, filenames.uniq.size
+    ensure
+      tempfiles.each do |tempfile|
+        tempfile.close!
+      end
+    end
   end
   
   if defined?(Encoding)
